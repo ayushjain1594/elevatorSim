@@ -42,14 +42,14 @@ class Elevator(object):
     def bring_elevator(self, floor_at):
         if self.current_state != floor_at:
             yield self.env.timeout(abs(self.current_state - floor_at)/self.speed)
-            print('Brought elevator from {} to {}'.format(self.current_state, floor_at))
+            print(f'Brought elevator from {self.current_state} to {floor_at}')
             self.current_state = floor_at
 
     def go_to_floor(self, floor_to):
         with suppress(simpy.Interrupt):
             self.last_go_to_process = self.env.timeout(abs(floor_to - self.current_state)/self.speed)
             yield self.last_go_to_process
-            print('Reached floor {} at {}'.format(floor_to, self.env.now))
+            print(f'Reached floor {floor_to} at {self.env.now}')
             self.current_state = floor_to
             
     def request_service(self, floor_at: int, floor_to: int):
@@ -59,9 +59,7 @@ class Elevator(object):
         :param floor_to: (int) floor where the service is being requested to
         :return: None
         """
-        print('Requesting elevator at floor {} to floor {} at time {}'.format(floor_at,
-                                                                              floor_to,
-                                                                              self.env.now))
+        print(f'Requesting elevator at floor {floor_at} to floor {floor_to} at time {self.env.now}')
         # change this to some central request processing system that takes
         # requests and queues them in a more realistic way
         with self.elevator.request() as req:
