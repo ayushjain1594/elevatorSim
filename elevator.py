@@ -4,7 +4,7 @@ import random
 import numpy as np
 
 
-class Elevator(object):
+class Elevator:
     """Class: Creates an elevator object with properties such as current
     state (floor which elevator is at), speed, possible states (floors).
     Also, handles and acts on various requests"""
