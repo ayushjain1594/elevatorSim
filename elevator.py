@@ -2,6 +2,7 @@ from __future__ import division
 import simpy
 import random
 import numpy as np
+from contextlib import suppress
 
 
 class Elevator(object):
@@ -45,13 +46,11 @@ class Elevator(object):
             self.current_state = floor_at
 
     def go_to_floor(self, floor_to):
-        try:
+        with suppress(simpy.Interrupt):
             self.last_go_to_process = self.env.timeout(abs(floor_to - self.current_state)/self.speed)
             yield self.last_go_to_process
             print('Reached floor {} at {}'.format(floor_to, self.env.now))
             self.current_state = floor_to
-        except simpy.Interrupt:
-            pass
             
     def request_service(self, floor_at: int, floor_to: int):
         """
