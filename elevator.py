@@ -10,7 +10,8 @@ class Elevator:
     state (floor which elevator is at), speed, possible states (floors).
     Also, handles and acts on various requests"""
 
-    def __init__(self, sim_env, floors, speed):
+    def __init__(self, sim_env, floors: tuple, floor_height: float,
+                 max_speed: float, max_accel: float):
         self.env = sim_env
         self.elevator = simpy.Resource(self.env)
         if type(floors) == tuple:
@@ -19,13 +20,13 @@ class Elevator:
             raise TypeError('Floors must be tuple!!')
 
         self.current_state = random.choice(self.possible_states)
-        self.speed = speed
+        self.speed = max_speed
         self.kinematics = {'current_speed': 0,
-                           'current_altitude': FLOOR_HEIGHT*(self.current_state - 1),
+                           'current_altitude': floor_height*(self.current_state - 1),
                            'current_acceleration': 0,
-                           'max_speed': MAX_SPEED,
-                           'max_acceleration': MAX_ACCELERATION,
-                           'time_to_max_speed': MAX_SPEED/MAX_ACCELERATION}
+                           'max_speed': max_speed,
+                           'max_acceleration': max_accel,
+                           'time_to_max_speed': max_speed/max_accel}
 
         self.last_go_to_process = None
 
@@ -70,28 +71,5 @@ class Elevator:
         print('Finished service')
 
 
-def wait_until_next_arrival():
-    yield env.timeout(np.random.exponential())
-
-
-def run_service():
-    while True:
-        # wait until next arrival
-        yield env.timeout(np.random.exponential(10))
-
-        req_at_floor = random.choice(FLOORS)
-        req_to_floor = random.choice([floor for floor in FLOORS
-                                      if floor != req_at_floor])
-        env.process(elevator.request_service(req_at_floor, req_to_floor))
-
-
 if __name__ == '__main__':
-    env = simpy.Environment()
-    FLOORS = tuple(range(1, 10))
-    FLOOR_HEIGHT = 4  # in meters
-    MAX_ACCELERATION = 1  # in meters per second square, same deceleration
-    MAX_SPEED = 4  # in meters per second
-
-    elevator = Elevator(env, FLOORS, 1)
-    env.process(run_service())
-    env.run(50)
+    pass
