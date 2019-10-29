@@ -10,7 +10,7 @@ class ElevatorControl:
 
 		self.ec_id = control_id
 		self.env = sim_env
-		if type(num_elevators) == 'int':
+		if type(num_elevators) == int:
 			self.elevators = {e_id: Elevator(sim_env, floors, floor_height, 
 				max_speed, max_accel) 
 			for e_id in range(1, num_elevators)
