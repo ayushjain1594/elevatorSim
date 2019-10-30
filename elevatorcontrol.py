@@ -10,20 +10,50 @@ class ElevatorControl:
 
 		self.ec_id = control_id
 		self.env = sim_env
-		if type(num_elevators) == int:
-			self.elevators = {e_id: Elevator(sim_env, floors, floor_height, 
-				max_speed, max_accel) 
-			for e_id in range(1, num_elevators)
-			}
+		self.floors = floors
+		if isinstance(num_elevators, int):
+			if num_elevators >= 1:
+				self.elevators = {e_id: Elevator(sim_env, floors, floor_height, 
+					max_speed, max_accel) 
+				for e_id in range(1, num_elevators)
+				}
+			else:
+				raise ValueError('Number of elevators must be greater than ' + 
+					'equal to 1')
 		else:
 			raise ValueError('Number of elevators must be integer')
 
 
-	def get_current_states(self):
+	def get_current_states(self, e_id=None):
 		"""Method returns states of each elevator that is 
 		in control by self"""
+		if e_id in self.elevators:
+				return {e_id: self.elevators[e_id].current_state}
+		else:
+			return {e_id: elevator.current_state 
+				for e_id, elevator in self.elevators.items()}
 
-	def request_service(self):
+		return {}
+
+	def select_elevator(self, floor_at):
+		"""Method selects one elevator from (possibly) multiple"""
+		if len(self.elevators) == 1:	
+			# return only available elevator
+			return next(iter(self.elevators))
+
+		else:
+			# choose the closest one (change this later)
+			delta = 9999
+			selected_e_id = next(iter(self.elevators))
+			for e_id, state in self.get_current_states():
+				if abs(state - floor_at) < delta:
+					delta = abs(state - floor_at)
+					selected_e_id = e_id
+				if delta == 0:
+					break
+			return selected_e_id
+
+	def request_service(self, floor_at: int, floor_to: int):
 		"""Method is the primary process created by a request in
 		simulation. The method further calls other processes such as -
 
@@ -40,3 +70,7 @@ class ElevatorControl:
 		the elevator must perform 1-2-4-5 even if 2 to 4 request came 
 		after 1 to 5. This is to be handled by ElevatorControl which takes in 
 		the request and converts them into tasks for elevator."""
+		if (floor_at not in self.floors) or (floor_to not in self.floors):
+			raise ValueError('Request outside service floors')
+
+		selected_e_id = self.select_elevator(floor_at)
