@@ -30,6 +30,34 @@ class Task:
 
             self.count = count
 
+    def timeout(self, time):
+        if time >= 0:
+            yield self.elevator.env.timeout(time)
+            
+    def go_to(self, floor_override=None):
+        current_floor = self.elevator.current_state # must be changed if recalled by interrupt
+        if floor_override is None:
+            travel_time = self.elevator.get_travel_time(current_floor, self.floor)
+        else:
+            travel_time = self.elevator.get_travel_time(current_floor, floor_override)
+
+        task_start_time = self.elevator.env.now
+
+        try:
+            yield self.timeout(travel_time)
+            self.elevator.current_state = self.floor \
+                if floor_override is None else floor_override
+
+        except Simpy.Interrupt as interrupt:
+            cause = interrupt.cause
+            if 'Go to:' in cause:
+                try:
+                    new_floor_to = int(cause[cause.index(':') + 1:])
+                    self.go_to(new_floor_to)
+
+                except IndexError | ValueError:
+                    pass
+
     def execute_task(self):
         if self.type == 'hold':
             yield self.timeout(max(2, self.count))
@@ -38,19 +66,8 @@ class Task:
             yield self.timeout(0.5)
 
         if self.type == 'move':
-            current_floor = self.elevator.current_state
-            travel_time = self.elevator.get_travel_time(current_floor, self.floor)
+            yield self.go_to()
 
-            try:
-                yield self.timeout(travel_time)
-                self.elevator.current_state = self.floor
-
-            except Simpy.Interrupt:
-                pass
-
-    def timeout(self, time):
-        if time >= 0:
-            yield self.elevator.env.timeout(time)
 
 class Elevator:
     """Class: Creates an elevator object with properties such as current
@@ -66,6 +83,8 @@ class Elevator:
         else:
             raise TypeError('Floors must be tuple!!')
 
+        self.floor_height = floor_height
+
         self.current_state = random.choice(self.possible_states)
         self.speed = max_speed
         self.kinematics = {'current_speed': 0,
@@ -77,57 +96,94 @@ class Elevator:
 
         self.last_go_to_process = None
 
-        """
-        # possibly new variables"""
-        self.tasks = [] # list holding all tasks 
+        self.tasks = {} # dictionary holding all tasks
+        self.task_keys = []
+        self.current_task_key = None
         
 
     def get_travel_time(self, floor_from: int, floor_to: int):
         """
         Method calculates travel time between two floors depending
         on elevator kinematics
+
         :param floor_from: (int)
         :param floor_to: (int)
         :return: (float) travel time
         """
-        pass
+        time = round((abs(floor_from - floor_to)*self.floor_height)/self.speed + \
+        self.max_speed/self.max_accel, 1)
+
+        return time
+
+    def get_current_direction(self):
+        """
+        Method looks at the current state, current and future tasks 
+        and returs one of - 'up', 'down', None
+
+        :return (str or None) 'up'/'down'/None
+        """
+        if self.current_task_key is None:
+            # if not executing any tasks
+            return None
+
+        else:
+            # executing some task
+            key_iterator = iter(self.current_task_key)
+            current_task_type = next(key_iterator, None)
+
+            if current_task_type in ['hold', 'doors']:
+                current_floor = next(key_iterator, None)
+                index = 0
+
+                # look at subsequent tasks to find 'move' type task
+                # else update current floor
+                while index < len(self.task_keys):
+                    key_iterator = iter(self.task_keys[index])
+                    next_task_type = next(key_iterator, None)
+
+                    if next_task_type in ['hold', 'doors']:
+                        current_floor = next(key_iterator, None)
+
+                    elif next_task_type is 'move':
+                        destination_floor = next(key_iterator, None)
+
+                        return 'up' if destination_floor - current_floor > 0 \
+                        else 'down'
+                    index += 1
+
+            elif current_task_type == 'move':
+                # get the origin and destination
+                current_floor = self.current_state
+                destination_floor = next(key_iterator, None)
+
+                return 'up' if destination_floor - current_floor > 0 \
+                else 'down'
+
+        return None
     
     def process_tasks(self):
+        """
+        Method executes all the pending tasks for the elevator
+        :return: None
+        """
+
+        # while there are pending tasks
         while len(self.tasks) > 1:
-            task = self.tasks.pop(0)
+            # get key to next task
+            self.curent_task_key = self.task_keys.pop(0)
+
+            # get the next task
+            task = self.tasks[self.current_task_key]
+
+            # execute and yield
             yield task.execute_task()
 
-    """
-    def bring_elevator(self, floor_at):
-        if self.current_state != floor_at:
-            yield self.env.timeout(abs(self.current_state - floor_at)/self.speed)
-            print(f'Brought elevator from {self.current_state} to {floor_at}')
-            self.current_state = floor_at
+            # delete it from tasks
+            del self.tasks[next_task_key]
 
-    def go_to_floor(self, floor_to):
-        with suppress(simpy.Interrupt):
-            self.last_go_to_process = self.env.timeout(abs(floor_to - self.current_state)/self.speed)
-            yield self.last_go_to_process
-            print(f'Reached floor {floor_to} at {self.env.now}')
-            self.current_state = floor_to
-            
-    
-    def request_service(self, floor_at: int, floor_to: int):
-        '''
-        :param floor_at: (int) floor where the service is being requested at
-        :param floor_to: (int) floor where the service is being requested to
-        :return: None
-        '''
-        print(f'Requesting elevator at floor {floor_at} to floor {floor_to} at time {self.env.now}')
-        # change this to some central request processing system that takes
-        # requests and queues them in a more realistic way
-        with self.elevator.request() as req:
-            yield req
-            yield self.env.process(self.bring_elevator(floor_at))
-            yield self.env.timeout(2)
-            yield self.env.process(self.go_to_floor(floor_to))
-        print('Finished service')
-    """
+        # after all the tasks are finished 
+        self.current_task_key = None
+
 
 if __name__ == '__main__':
     pass

@@ -53,6 +53,23 @@ class ElevatorControl:
 					break
 			return selected_e_id
 
+	def add_update_tasks(self, assigned_e_id):
+		"""Method takes request and converts them into tasks for the 
+		selected elevator. The method then adds them to elevator's list
+		of tasks. The method may also update previously assigned tasks 
+		if multiple requests can be scheduled more efficiently"""
+
+		current_state, direction = self.get_current_states(assigned_e_id)
+
+		# change method above to get more information on elevator's 
+		# current state such actual current location and direction
+		# of movement
+
+		# if direction is opposite to the request
+		# 		check if there are further tasks in the 
+		#        direction of requst
+		# 		if there are further tasks in the direction
+
 	def request_service(self, floor_at: int, floor_to: int):
 		"""Method is the primary process created by a request in
 		simulation. The method further calls other processes such as -
