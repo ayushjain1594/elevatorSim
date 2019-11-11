@@ -3,9 +3,10 @@ import simpy
 from elevator import Elevator
 from elevatorcontrol import ElevatorControl
 from trafficgenerator import TrafficGenerator
+import sys
 
 RANDOM_SEED = 42
-SIM_TIME = 100  # units of time for which simulation should run
+SIM_TIME = 10  # units of time for which simulation should run
 FLOORS = tuple(range(1, 10))
 FLOOR_HEIGHT = 4  # in meters
 MAX_ACCELERATION = 1  # in meters per second square, same deceleration
@@ -35,6 +36,9 @@ class Simulation:
 
 
 if __name__ == '__main__':
-    sim = Simulation()
-    sim.env.process(sim.run_service())
-    sim.env.run(SIM_TIME)
+    if len(sys.argv) != 2:
+        print("Provide simulation time in format python simulation.py SIM_TIME")
+    else:
+        sim = Simulation()
+        sim.env.process(sim.run_service())
+        sim.env.run(sys.argv[1])

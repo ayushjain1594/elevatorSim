@@ -134,7 +134,7 @@ class Elevator:
             return 0
         dist = abs(floor_from - floor_to)*self.floor_height
 
-        if math.sqrt(dist*self.max_accel) < self.max_speed:
+        if math.sqrt(dist*self.max_accel) < self.speed:
             time = round((2*dist)/math.sqrt(dist*self.max_accel), 1)
 
         else:    
@@ -189,7 +189,7 @@ class Elevator:
         """
 
         # while there are pending tasks
-        while len(self.tasks) > 1:
+        while len(self.tasks) >= 1:
             # get key to next task
             self.current_task_key = self.task_keys.pop(0)
 

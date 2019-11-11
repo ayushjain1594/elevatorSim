@@ -65,20 +65,21 @@ class ElevatorControl:
 		# two formats of task keys
 		if task_type in ['hold', 'doors']:
 			# stationary tasks
-			key = (task_type, floor, self.env.now)
+			key = (task_type, floor, round(self.env.now, 1))
 		else:
 			# move tasks
-			key = (task_type, floor_from, floor_to, self.env.now)
+			key = (task_type, floor_from, floor_to, round(self.env.now, 1))
 
 		# add key to list of task keys
 		if specific_index is None:
 			self.elevators[e_id].task_keys.append(key)
+		
 		else:
 			self.elevators[e_id].task_keys.insert(specific_index, key)
 
 		# add key, Task Object pair to task dictionary
 		self.elevators[e_id].tasks[key] = \
-			Task(self.elevators.get(e_id), task_type, floor, 
+			Task(self.elevators[e_id], task_type, floor, 
 				floor_from, floor_to, count)
 
 	def position_task(self, e_id, floor_from, floor_to):
@@ -99,6 +100,8 @@ class ElevatorControl:
 		request_dir = 'up' if floor_to > floor_from else 'down'
 
 		flag = 0
+
+		"""
 		current_index = 0
 		while current_index < len(self.elevators.get(e_id).task_keys):
 			next_task_key = self.elevators.get(e_id).task_keys[current_index]
@@ -158,10 +161,10 @@ class ElevatorControl:
 						#	|
 
 						pass
-
+			current_index += 1
 
 		
-		"""
+		
 		flag = 0
 		index = 0
 		while (flag == 0) or (index < len(self.elevators.get(e_id).task_keys)):
@@ -259,7 +262,7 @@ class ElevatorControl:
 
 			self.create_task(e_id, 'hold', floor=floor_to, count=1)
 
-			self.create_task(e_id, 'doors', floor=floor_to)
+			# self.create_task(e_id, 'doors', floor=floor_to)
 		
 
 	def request_service(self, floor_at: int, floor_to: int, count: int):
