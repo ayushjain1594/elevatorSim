@@ -98,6 +98,7 @@ class ElevatorControl:
 		current_task_key = self.elevators.get(e_id).current_task_key
 		request_dir = 'up' if floor_to > floor_from else 'down'
 
+		flag = 0
 		current_index = 0
 		while current_index < len(self.elevators.get(e_id).task_keys):
 			next_task_key = self.elevators.get(e_id).task_keys[current_index]
@@ -257,6 +258,8 @@ class ElevatorControl:
 			self.create_task(e_id, 'doors', floor=floor_to)
 
 			self.create_task(e_id, 'hold', floor=floor_to, count=1)
+
+			self.create_task(e_id, 'doors', floor=floor_to)
 		
 
 	def request_service(self, floor_at: int, floor_to: int, count: int):
