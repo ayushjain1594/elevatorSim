@@ -1,8 +1,10 @@
 from __future__ import division
 import simpy
 from elevator import Elevator
+from elevatorcontrol import ElevatorControl
 from trafficgenerator import TrafficGenerator
 
+RANDOM_SEED = 42
 SIM_TIME = 100  # units of time for which simulation should run
 FLOORS = tuple(range(1, 10))
 FLOOR_HEIGHT = 4  # in meters
@@ -13,17 +15,23 @@ EXP_DIST_LAMBDA = 10
 
 class Simulation:
     def __init__(self):
+        # create a simpy environment
         self.env = simpy.Environment()
 
-        self.elevator = Elevator(self.env, FLOORS, FLOOR_HEIGHT, MAX_SPEED, MAX_ACCELERATION)
+        self.elevatorcontrol = ElevatorControl(self.env, 1, FLOORS, 1, 
+            FLOOR_HEIGHT, MAX_SPEED, MAX_ACCELERATION)
         self.traffic = TrafficGenerator(self.env, EXP_DIST_LAMBDA, FLOORS)
 
     def run_service(self):
         while True:
-            pass
             # wait until next arrival
-            count, origin, destination, = yield self.env.process(self.traffic.next_traffic())
-            self.env.process(self.elevator.request_service(origin, destination))
+            count, origin, destination, = \
+                yield self.env.process(self.traffic.next_traffic())
+
+            print(f'Request arrived: {origin} to {destination}'+ \
+                f' at {round(self.env.now, 1)}')
+            
+            self.elevatorcontrol.request_service(origin, destination, count)
 
 
 if __name__ == '__main__':

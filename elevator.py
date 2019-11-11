@@ -3,70 +3,88 @@ import simpy
 import random
 import numpy as np
 from contextlib import suppress
+import math
 
 
 class Task:
+    """
+    Class: Creates a task object for elevators. Elevator object do not have visibility
+    to request but their own tasks. ElevatorControl creates such tasks for elevators.
+    """
+
     def __init__(self, elevator_object, task_type: ['hold', 'move', 'doors'],
-        floor=None, count=None):
+        floor=None, floor_from=None, floor_to=None, count=None):
+
         self.elevator = elevator_object
         self.type = task_type
 
         if self.type == 'move':
-            if floor is None:
-                raise ValueError('Move type task requires destination floor')
-
-            elif floor not in self.elevator.possible_states:
+            if (floor_from not in self.elevator.possible_states) or \
+                (floor_to not in self.elevator.possible_states):
                 raise ValueError('Destination floor is outside possible states')
-
             else:
-                self.floor = floor
+                self.floor_from = floor_from
+                self.floor_to = floor_to
+
+        if self.type in ['doors', 'hold']:
+            self.floor = floor
 
         if self.type == 'hold':
             if not isinstance(count, int):
-                raise ValueError('Poeple count must be integer')
-
+                raise ValueError('People count must be integer')
             if count < 0:
                 raise ValueError('People count cannot be negative number')
-
             self.count = count
 
     def timeout(self, time):
+        """
+        Method seprates simpy timeout from processes that may require to be
+        interrupted. Simpy does not allow controlled interrupt of timeout processes.
+        """
         if time >= 0:
             yield self.elevator.env.timeout(time)
             
-    def go_to(self, floor_override=None):
-        current_floor = self.elevator.current_state # must be changed if recalled by interrupt
-        if floor_override is None:
-            travel_time = self.elevator.get_travel_time(current_floor, self.floor)
-        else:
-            travel_time = self.elevator.get_travel_time(current_floor, floor_override)
+    def go_to(self):
+        """Method executes a 'move' type task and allows for interruption
+        by ElevatorControl"""
 
+        # get travel time
+        travel_time = self.elevator.get_travel_time(self.floor_from, self.floor_to)
+
+        # mark the start of execution
         task_start_time = self.elevator.env.now
 
         try:
-            yield self.timeout(travel_time)
-            self.elevator.current_state = self.floor \
-                if floor_override is None else floor_override
+            yield self.elevator.env.process(self.timeout(travel_time))
 
-        except Simpy.Interrupt as interrupt:
+            # Once reached, update current state
+            self.elevator.current_state = self.floor_to
+
+        except simpy.Interrupt as interrupt:
+            # If interruted, get cause
             cause = interrupt.cause
             if 'Go to:' in cause:
                 try:
-                    new_floor_to = int(cause[cause.index(':') + 1:])
-                    self.go_to(new_floor_to)
+                    self.floor_to = int(cause[cause.index(':') + 1:])
+
+                    # Initiate a new process
+                    yield self.elevator.env.process(self.go_to(new_floor_to))
 
                 except IndexError | ValueError:
                     pass
 
     def execute_task(self):
+
         if self.type == 'hold':
-            yield self.timeout(max(2, self.count))
+            #print(" "*25 + f'Holding elevator at floor {self.elevator.current_state} at time {round(self.elevator.env.now, 1)}')
+            yield self.elevator.env.process(self.timeout(max(2, self.count)))
 
         if self.type == 'doors':
-            yield self.timeout(0.5)
+            yield self.elevator.env.process(self.timeout(0.5))
 
         if self.type == 'move':
-            yield self.go_to()
+            print(" "*25 + f'Moving elevator to {self.floor_to} at time {round(self.elevator.env.now, 1)}')
+            yield self.elevator.env.process(self.go_to())
 
 
 class Elevator:
@@ -87,6 +105,7 @@ class Elevator:
 
         self.current_state = random.choice(self.possible_states)
         self.speed = max_speed
+        self.max_accel = max_accel
         self.kinematics = {'current_speed': 0,
                            'current_altitude': floor_height*(self.current_state - 1),
                            'current_acceleration': 0,
@@ -110,8 +129,17 @@ class Elevator:
         :param floor_to: (int)
         :return: (float) travel time
         """
-        time = round((abs(floor_from - floor_to)*self.floor_height)/self.speed + \
-        self.max_speed/self.max_accel, 1)
+        if (floor_from not in self.possible_states) or \
+            (floor_to not in self.possible_states):
+            return 0
+        dist = abs(floor_from - floor_to)*self.floor_height
+
+        if math.sqrt(dist*self.max_accel) < self.max_speed:
+            time = round((2*dist)/math.sqrt(dist*self.max_accel), 1)
+
+        else:    
+            time = round((abs(floor_from - floor_to)*self.floor_height)/self.speed + \
+            self.speed/self.max_accel, 1)
 
         return time
 
@@ -132,33 +160,26 @@ class Elevator:
             current_task_type = next(key_iterator, None)
 
             if current_task_type in ['hold', 'doors']:
-                current_floor = next(key_iterator, None)
                 index = 0
 
                 # look at subsequent tasks to find 'move' type task
-                # else update current floor
                 while index < len(self.task_keys):
                     key_iterator = iter(self.task_keys[index])
                     next_task_type = next(key_iterator, None)
+                    if next_task_type == 'move':
+                        floor_from = next(key_iterator, None)
+                        floor_to = next(key_iterator, None)
 
-                    if next_task_type in ['hold', 'doors']:
-                        current_floor = next(key_iterator, None)
-
-                    elif next_task_type is 'move':
-                        destination_floor = next(key_iterator, None)
-
-                        return 'up' if destination_floor - current_floor > 0 \
+                        return 'up' if floor_to - floor_from > 0 \
                         else 'down'
                     index += 1
 
             elif current_task_type == 'move':
-                # get the origin and destination
-                current_floor = self.current_state
-                destination_floor = next(key_iterator, None)
+                floor_from = next(key_iterator, None)
+                floor_to = next(key_iterator, None)
 
-                return 'up' if destination_floor - current_floor > 0 \
+                return 'up' if floor_to - floor_from > 0 \
                 else 'down'
-
         return None
     
     def process_tasks(self):
@@ -170,16 +191,16 @@ class Elevator:
         # while there are pending tasks
         while len(self.tasks) > 1:
             # get key to next task
-            self.curent_task_key = self.task_keys.pop(0)
+            self.current_task_key = self.task_keys.pop(0)
 
             # get the next task
             task = self.tasks[self.current_task_key]
 
             # execute and yield
-            yield task.execute_task()
+            yield self.env.process(task.execute_task())
 
             # delete it from tasks
-            del self.tasks[next_task_key]
+            del self.tasks[self.current_task_key]
 
         # after all the tasks are finished 
         self.current_task_key = None

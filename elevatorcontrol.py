@@ -1,4 +1,4 @@
-from elevator import Elevator
+from elevator import Elevator, Task
 
 class ElevatorControl:
 	"""Object of this class have one or more Elevator objects in 
@@ -11,11 +11,12 @@ class ElevatorControl:
 		self.ec_id = control_id
 		self.env = sim_env
 		self.floors = floors
+
 		if isinstance(num_elevators, int):
 			if num_elevators >= 1:
 				self.elevators = {e_id: Elevator(sim_env, floors, floor_height, 
 					max_speed, max_accel) 
-				for e_id in range(1, num_elevators)
+				for e_id in range(1, num_elevators + 1)
 				}
 			else:
 				raise ValueError('Number of elevators must be greater than ' + 
@@ -42,7 +43,8 @@ class ElevatorControl:
 			return next(iter(self.elevators))
 
 		else:
-			# choose the closest one (change this later)
+			# choose the closest one (change this later to add
+			# direction)
 			delta = 9999
 			selected_e_id = next(iter(self.elevators))
 			for e_id, state in self.get_current_states():
@@ -53,41 +55,223 @@ class ElevatorControl:
 					break
 			return selected_e_id
 
-	def add_update_tasks(self, assigned_e_id):
+	def create_task(self, e_id, task_type, floor=None, floor_from=None, 
+		floor_to=None, count=None, specific_index=None):
+		"""
+		Method creates an object of class Task and adds to tasks for 
+		the specified elevator, with an option to add at a particular
+		position.
+		"""
+		# two formats of task keys
+		if task_type in ['hold', 'doors']:
+			# stationary tasks
+			key = (task_type, floor, self.env.now)
+		else:
+			# move tasks
+			key = (task_type, floor_from, floor_to, self.env.now)
+
+		# add key to list of task keys
+		if specific_index is None:
+			self.elevators[e_id].task_keys.append(key)
+		else:
+			self.elevators[e_id].task_keys.insert(specific_index, key)
+
+		# add key, Task Object pair to task dictionary
+		self.elevators[e_id].tasks[key] = \
+			Task(self.elevators.get(e_id), task_type, floor, 
+				floor_from, floor_to, count)
+
+	def position_task(self, e_id, floor_from, floor_to):
+		pass
+
+	def add_update_tasks(self, e_id, floor_from, floor_to, count):
 		"""Method takes request and converts them into tasks for the 
 		selected elevator. The method then adds them to elevator's list
 		of tasks. The method may also update previously assigned tasks 
 		if multiple requests can be scheduled more efficiently"""
+		if e_id not in self.elevators:
+			raise KeyError('Invalid elevator id provided')
 
-		current_state, direction = self.get_current_states(assigned_e_id)
+		
+		current_state = self.get_current_states(e_id)
+		direction = self.elevators.get(e_id).get_current_direction()
+		current_task_key = self.elevators.get(e_id).current_task_key
+		request_dir = 'up' if floor_to > floor_from else 'down'
 
-		# change method above to get more information on elevator's 
-		# current state such actual current location and direction
-		# of movement
+		current_index = 0
+		while current_index < len(self.elevators.get(e_id).task_keys):
+			next_task_key = self.elevators.get(e_id).task_keys[current_index]
+			key_iterator = iter(next_task_key)
+			next_task = next(key_iterator, None)
 
-		# if direction is opposite to the request
-		# 		check if there are further tasks in the 
-		#        direction of requst
-		# 		if there are further tasks in the direction
+			if next_task == 'move':
+				move_task_from = next(key_iterator, None)
+				move_task_to = next(key_iterator, None)
 
-	def request_service(self, floor_at: int, floor_to: int):
-		"""Method is the primary process created by a request in
-		simulation. The method further calls other processes such as -
+				move_task_dir = 'up' if move_task_to > move_task_from else 'down'
 
-		Check if one of its elevators are at same floor as of request.
-		If not, decide which elevator will be assigned for the request.
-		Add request to assigned elevator's tasks and yield until elevator
-		finishes the task.
+				if move_task_dir == request_dir:
+					if move_task_dir == 'up':
+						# Case 1
+						#		^
+						#	^	|
+						#	|	|
+						#	|	|
+						#		|
 
-		The most crucial part is the elevator's fulfilment of task. The 
-		elevator should not process these tasks as FIFO as it is inefficient.
+						# Case 2
+						#		^
+						#	^	|
+						#	|	|
+						#	|	|
 
-		Some tasks could be completed which working on others. For instance,
-		if there is a request from floor 1 to 5 and another request from 2 to 4,
-		the elevator must perform 1-2-4-5 even if 2 to 4 request came 
-		after 1 to 5. This is to be handled by ElevatorControl which takes in 
-		the request and converts them into tasks for elevator."""
+						# Case 3
+						#	^	^
+						#	|	|
+						#	|	|
+						#		|
+
+						# Case 4
+						#		^
+						#	^	|
+						#	|	|
+						#	|
+
+						# Case 5
+						#	^
+						#	|	^
+						#	|	|
+						#		|
+
+						# Case 6
+						#	^	^
+						#	|	|
+						#	|	|
+						#	|	|
+
+						# Case 7
+						#	^	
+						#	|	^
+						#	|	|
+						#	|	|
+						#	|
+
+						pass
+
+
+		
+		"""
+		flag = 0
+		index = 0
+		while (flag == 0) or (index < len(self.elevators.get(e_id).task_keys)):
+			key_iterator = iter(self.elevators.get(e_id).task_keys[index])
+			next_task_type = 
+
+		if direction is not None:
+			# elevator is currently processing tasks
+			service_direction = 'up' if floor_to > floor_from else 'down'
+			if direction == service_direction:
+				if current_task in ['hold', 'doors']:
+					if service_direction == 'up':
+						if current_state[e_id] <= floor_from:
+							index = 0
+							while index < len(self.elevators.get(e_id).task_keys):
+								next_task = self.elevators.get(e_id).task_keys[index]
+								key_iterator = iter(next_task)
+
+								if next(key_iterator, None) == 'move':
+									next_move_dest = next(key_iterator, None)
+									if next_move_dest <= floor_from:
+										# look for next move task
+										pass
+									else:
+										# next_move_dest > floor_from 
+										# task is to be updated
+										if next_move_dest >= floor_to:
+											# subset
+											del self.elevators.get(e_id).tasks[next_task]
+											self.elevators.get(e_id).task_keys.remove(index)
+											self.create_task(e_id, 'move', floor_from, 
+												count, index)
+											self.create_task(e_id, 'doors', floor_from, 
+												count, index + 1)
+											self.create_task(e_id, 'hold', floor_from, 
+												count, index + 2)
+											self.create_task(e_id, 'doors', floor_from,
+												count, index + 3)
+											self.create_task(e_id, 'move', floor_to,
+												count, index + 4)
+											self.create_task(e_id, 'doors', floor_to, 
+												count, index + 5)
+											self.create_task(e_id, 'hold', floor_to, 
+												count, index + 6)
+											self.create_task(e_id, 'doors', floor_to,
+												count, index + 7)
+
+											if next_move_dest != floor_to:
+												# proper subset
+												self.create_task(e_id, 'move', 
+													next_move_dest,
+													count, index + 8)
+											flag = 1
+											break
+
+										else:
+											# next_move_dest < floor_to
+											# not a subset
+											del self.elevators.get(e_id).tasks[next_task]
+											self.elevators.get(e_id).task_keys.remove(index)
+											self.create_task(e_id, 'move', floor_from, 
+												count, index)
+											self.create_task(e_id, 'doors', floor_from, 
+												count, index + 1)
+											self.create_task(e_id, 'hold', floor_from, 
+												count, index + 2)
+											self.create_task(e_id, 'doors', floor_from,
+												count, index + 3)
+											self.create_task(e_id, 'move', next_move_dest,
+												count, index + 4)
+											self.add_update_tasks(e_id, next_move_dest, 
+												floor_to, count)
+											flag = 1
+											break
+								index += 1
+						else:
+							# current_state > floor_from
+							pass
+		"""
+		if flag == 1:
+			print("Added request task in middle")
+
+		if flag == 0:
+			if current_state[e_id] != floor_from:
+				self.create_task(e_id, 'move', floor_from=current_state[e_id], 
+					floor_to=floor_from, count=1)
+
+			self.create_task(e_id, 'doors', floor=floor_from)
+
+			self.create_task(e_id, 'hold', floor=floor_from, count=1)
+
+			self.create_task(e_id, 'move', floor_from=floor_from, floor_to=floor_to)
+
+			self.create_task(e_id, 'doors', floor=floor_to)
+
+			self.create_task(e_id, 'hold', floor=floor_to, count=1)
+		
+
+	def request_service(self, floor_at: int, floor_to: int, count: int):
+		""" Method is the primary process created by a request in
+		simulation """
+
 		if (floor_at not in self.floors) or (floor_to not in self.floors):
 			raise ValueError('Request outside service floors')
 
+		# find an elevator to allocate the request
 		selected_e_id = self.select_elevator(floor_at)
+
+		# Convert request into tasks for selected elevator to process
+		self.add_update_tasks(selected_e_id, floor_at, floor_to, count)
+
+		# If elevator was idle, call to start processing tasks
+		if self.elevators.get(selected_e_id).current_task_key is None:
+			self.env.process(self.elevators.get(selected_e_id).process_tasks())
