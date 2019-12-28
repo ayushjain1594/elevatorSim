@@ -63,7 +63,7 @@ class ElevatorControl:
 		position.
 		"""
 		# two formats of task keys
-		if task_type in ['hold', 'doors']:
+		if task_type in ['hold', 'open door', 'close door']:
 			# stationary tasks
 			key = (task_type, floor, round(self.env.now, 1))
 		else:
@@ -78,14 +78,30 @@ class ElevatorControl:
 			self.elevators[e_id].task_keys.insert(specific_index, key)
 
 		# add key, Task Object pair to task dictionary
-		self.elevators[e_id].tasks[key] = \
-			Task(self.elevators[e_id], task_type, floor, 
-				floor_from, floor_to, count)
+		try:
+			self.elevators[e_id].tasks[key] = \
+				Task(self.elevators[e_id], task_type, floor, 
+					floor_from, floor_to, count)
+		except ValueError as err:
+			print(f'Error occured creating task {task_type},'+\
+			f'floor {floor}, floor_from {floor_from} floor_to {floor_to}')
 
 	def position_task(self, e_id, floor_from, floor_to):
 		pass
 
-	def add_update_tasks(self, e_id, floor_from, floor_to, count):
+	def strictly_less(a, b, dir):
+		if dir > 0:
+			return True if a < b else False
+		else:
+			return True if b < a else False
+
+	def strictly_greater(a, b, dir):
+		if dir > 0:
+			return True if a > b else False
+		else:
+			return True if b > a else False
+
+	def add_update_tasks(self, e_id, floor_from, floor_to, count, starting_index=0):
 		"""Method takes request and converts them into tasks for the 
 		selected elevator. The method then adds them to elevator's list
 		of tasks. The method may also update previously assigned tasks 
@@ -93,177 +109,252 @@ class ElevatorControl:
 		if e_id not in self.elevators:
 			raise KeyError('Invalid elevator id provided')
 
-		
 		current_state = self.get_current_states(e_id)
 		direction = self.elevators.get(e_id).get_current_direction()
 		current_task_key = self.elevators.get(e_id).current_task_key
-		request_dir = 'up' if floor_to > floor_from else 'down'
+		req_dir = 1 if floor_to > floor_from else -1
 
 		flag = 0
 
-		"""
-		current_index = 0
-		while current_index < len(self.elevators.get(e_id).task_keys):
-			next_task_key = self.elevators.get(e_id).task_keys[current_index]
-			key_iterator = iter(next_task_key)
-			next_task = next(key_iterator, None)
+		try:
+			current_index = starting_index
+			while current_index < len(self.elevators.get(e_id).task_keys) and \
+			flag == 0:
 
-			if next_task == 'move':
-				move_task_from = next(key_iterator, None)
-				move_task_to = next(key_iterator, None)
+				next_task_key = self.elevators.get(e_id).task_keys[current_index]
+				key_iterator = iter(next_task_key)
+				# get task type, such as 'move', 'doors', etc
+				next_task_type = next(key_iterator, None)
 
-				move_task_dir = 'up' if move_task_to > move_task_from else 'down'
+				if next_task_type == 'move':
 
-				if move_task_dir == request_dir:
-					if move_task_dir == 'up':
-						# Case 1
-						#		^
-						#	^	|
-						#	|	|
-						#	|	|
-						#		|
+					move_task_from = next(key_iterator, None)
+					move_task_to = next(key_iterator, None)
+					move_task_dir = 1 if move_task_to > move_task_from else -1
 
-						# Case 2
-						#		^
-						#	^	|
-						#	|	|
-						#	|	|
+					if move_task_dir == req_dir:
 
-						# Case 3
-						#	^	^
-						#	|	|
-						#	|	|
-						#		|
+						if strictly_less(move_task_to, floor_to, req_dir):
 
-						# Case 4
-						#		^
-						#	^	|
-						#	|	|
-						#	|
+							# Case 1
+							#	O   N
+							#		^
+							#	^	|
+							#	|	|
+							#	|	|
+							#		|
+							if strictly_greater(move_task_from, floor_from, req_dir):
+								pass
 
-						# Case 5
-						#	^
-						#	|	^
-						#	|	|
-						#		|
+							# Case 2
+							#	O   N
+							#		^
+							#	^	|
+							#	|	|
+							#	|	|
+							if move_task_from == floor_from:
+								prev_hold_task_key = self.elevators.get(
+									e_id).task_keys[current_index-2]
+								prev_door_task_key = self.elevators.get(
+									e_id).task_keys[current_index-1]
+								self.elevators.get(e_id).tasks[prev_door_task_key].update_count(count)
+								self.elevators.get(e_id).tasks[prev_hold_task_key].update_count(count)
+								
+								self.elevators.get(e_id).tasks[next_task_key].update_count(count)
+								self.add_update_tasks(e_id, move_task_to, floor_to, count, current_index+1)
+								flag = 1
+							
 
-						# Case 6
-						#	^	^
-						#	|	|
-						#	|	|
-						#	|	|
+							# Case 3
+							#	O   N
+							#		^
+							#	^	|
+							#	|	|
+							#	|
+							if strictly_less(move_task_from, floor_from, req_dir) and \
+							strictly_greater(move_task_to, floor_from, req_dir):
+								orig_count = self.elevators.get(e_id).tasks[next_task_key].count
+								del self.elevators.get(e_id).tasks[next_task_key]
+								del self.elevators.get(e_id).task_keys[current_index]
+								self.create_task(e_id, 'move', floor_from=move_task_from, 
+									floor_to=floor_from, count=orig_count, 
+									specific_index=current_index)
+								self.create_task(e_id, 'open door', floor=floor_from, 
+									count=count, specific_index=current_index+1)
+								self.create_task(e_id, 'hold', floor=floor_from,
+									count=count, specific_index=current_index+2)
+								self.create_task(e_id, 'close door', floor=floor_from, 
+									count=count, specific_index=current_index+3)
+								self.create_task(e_id, 'move', floor_from=floor_from,
+									floor_to=move_task_to, count=orig_count+count,
+									specific_index=current_index+4)
+								self.add_update_tasks(e_id, move_task_to, floor_to, count, current_index+5)
+								flag = 1
 
-						# Case 7
-						#	^	
-						#	|	^
-						#	|	|
-						#	|	|
-						#	|
+						elif strictly_greater(move_task_to, floor_to, req_dir):
+							
+							# Case 4
+							#	O   N
+							#	^
+							#	|	^
+							#	|	|
+							#		|
+							if strictly_greater(move_task_from, floor_from, req_dir) and \
+							strictly_less(move_task_from, floor_to, req_dir):
+								pass
 
-						pass
-			current_index += 1
+							# Case 5
+							#	O   N
+							#	^
+							#	|	^
+							#	|	|
+							#	|	|
+							if task_from == from_:
+								prev_hold_task_key = self.elevators.get(
+									e_id).task_keys[current_index-2]
+								prev_door_task_key = self.elevators.get(
+									e_id).task_keys[current_index-1]
+								self.elevators.get(e_id).tasks[prev_door_task_key].update_count(count)
+								self.elevators.get(e_id).tasks[prev_hold_task_key].update_count(count)
 
-		
-		
-		flag = 0
-		index = 0
-		while (flag == 0) or (index < len(self.elevators.get(e_id).task_keys)):
-			key_iterator = iter(self.elevators.get(e_id).task_keys[index])
-			next_task_type = 
+								orig_count = self.elevators.get(e_id).tasks[next_task_key].count
+								del self.elevators.get(e_id).tasks[next_task_key]
+								del self.elevators.get(e_id).task_keys[current_index]
+								self.create_task(e_id, 'move', 
+									floor_from=move_task_from, floor_to=floor_to, 
+									count=orig_count+count, specific_index=current_index)
+								self.create_task(e_id, 'open door', floor=floor_to, 
+									count=count, specific_index=current_index+1)
+								self.create_task(e_id, 'hold', floor=floor_to, 
+									count=count, specific_index=current_index+2)
+								self.create_task(e_id, 'close door', floor=floor_to, 
+									count=count, specific_index=current_index+3)
+								self.create_task(e_id, 'move',
+									floor_from=floor_to, floor_to=move_task_to, 
+									count=orig_count, specific_index=current_index+4)
+								flag = 1
 
-		if direction is not None:
-			# elevator is currently processing tasks
-			service_direction = 'up' if floor_to > floor_from else 'down'
-			if direction == service_direction:
-				if current_task in ['hold', 'doors']:
-					if service_direction == 'up':
-						if current_state[e_id] <= floor_from:
-							index = 0
-							while index < len(self.elevators.get(e_id).task_keys):
-								next_task = self.elevators.get(e_id).task_keys[index]
-								key_iterator = iter(next_task)
+							# Case 6
+							#	O   N
+							#	^	
+							#	|	^
+							#	|	|
+							#	|	|
+							#	|
+							if strictly_less(move_task_from, floor_from, req_dir):
+								
+								orig_count = self.elevators.get(e_id).tasks[next_task_key].count
+								
+								del self.elevators.get(e_id).tasks[next_task_key]
+								del self.elevators.get(e_id).task_keys[current_index]
+								
+								
+								self.create_task(e_id, 'move', floor_from=move_task_from,
+									floor_to=floor_from, count=orig_count,
+									specific_index=current_index)
 
-								if next(key_iterator, None) == 'move':
-									next_move_dest = next(key_iterator, None)
-									if next_move_dest <= floor_from:
-										# look for next move task
-										pass
-									else:
-										# next_move_dest > floor_from 
-										# task is to be updated
-										if next_move_dest >= floor_to:
-											# subset
-											del self.elevators.get(e_id).tasks[next_task]
-											self.elevators.get(e_id).task_keys.remove(index)
-											self.create_task(e_id, 'move', floor_from, 
-												count, index)
-											self.create_task(e_id, 'doors', floor_from, 
-												count, index + 1)
-											self.create_task(e_id, 'hold', floor_from, 
-												count, index + 2)
-											self.create_task(e_id, 'doors', floor_from,
-												count, index + 3)
-											self.create_task(e_id, 'move', floor_to,
-												count, index + 4)
-											self.create_task(e_id, 'doors', floor_to, 
-												count, index + 5)
-											self.create_task(e_id, 'hold', floor_to, 
-												count, index + 6)
-											self.create_task(e_id, 'doors', floor_to,
-												count, index + 7)
+								self.create_task(e_id, 'open door', floor=floor_from,
+									count=count, specific_index=current_index+1)
+								self.create_task(e_id, 'hold', floor=floor_from, 
+									count=count, specific_index=current_index+2)
+								self.create_task(e_id, 'close door', floor=floor_from,
+									count=count, specific_index=current_index+3)
 
-											if next_move_dest != floor_to:
-												# proper subset
-												self.create_task(e_id, 'move', 
-													next_move_dest,
-													count, index + 8)
-											flag = 1
-											break
+								self.create_task(e_id, 'move', floor_from=floor_from, 
+									floor_to=floor_to, count=orig_count+count,
+									specific_index=current_index+4)
 
-										else:
-											# next_move_dest < floor_to
-											# not a subset
-											del self.elevators.get(e_id).tasks[next_task]
-											self.elevators.get(e_id).task_keys.remove(index)
-											self.create_task(e_id, 'move', floor_from, 
-												count, index)
-											self.create_task(e_id, 'doors', floor_from, 
-												count, index + 1)
-											self.create_task(e_id, 'hold', floor_from, 
-												count, index + 2)
-											self.create_task(e_id, 'doors', floor_from,
-												count, index + 3)
-											self.create_task(e_id, 'move', next_move_dest,
-												count, index + 4)
-											self.add_update_tasks(e_id, next_move_dest, 
-												floor_to, count)
-											flag = 1
-											break
-								index += 1
+								self.create_task(e_id, 'open door', floor=floor_to,
+									count=count, specific_index=current_index+5)
+								self.create_task(e_id, 'hold', floor=floor_to, 
+									count=count, specific_index=current_index+6)
+								self.create_task(e_id, 'close door', floor=floor_to,
+									count=count, specific_index=current_index+7)
+
+								self.create_task(e_id, 'move', floor_from=floor_to,
+									floor_to=move_task_to, count=orig_count,
+									specific_index=current_index+8)
+								flag = 1
+								
+
 						else:
-							# current_state > floor_from
-							pass
-		"""
+							# move_task_to == floor_to
+							# Case 7
+							#	O   N
+							#	^	^
+							#	|	|
+							#	|	|
+							#		|
+							# ***First move in this direction otherwise
+							# will fall under case 4***
+
+							# Case 8
+							#	O   N
+							#	^	^
+							#	|	|
+							#	|	|
+							#	|	|
+							if move_task_from == floor_from:
+								
+								# update count in 'close door' and 'hold'
+								prev_hold_task_key = self.elevators.get(
+									e_id).task_keys[current_index-2]
+								prev_door_task_key = self.elevators.get(
+									e_id).task_keys[current_index-1]
+								self.elevators.get(e_id).tasks[prev_door_task_key].update_count(count)
+								self.elevators.get(e_id).tasks[prev_hold_task_key].update_count(count)
+
+								self.elevators.get(e_id).tasks[next_task_key].update_count(count)
+
+								foll_door_task_key = self.elevators.get(
+									e_id).task_keys[current_index+1]
+								foll_hold_task_key = self.elevators.get(
+									e_id).task_keys[current_index+2]
+								self.elevators.get(e_id).tasks[foll_door_task_key].update_count(count)
+								self.elevators.get(e_id).tasks[foll_hold_task_key].update_count(count)
+								flag = 1
+
+				current_index += 1
+
+		except KeyError as err:
+			print(err)
+			if err in self.elevators.get(e_id).tasks.keys():
+				print("key was present")
+			else:
+				print("key not in Task.keys()")
+			if err in self.elevators.get(e_id).task_keys:
+				print("key was present in task_keys list")
+			else:
+				print("key not in task_keys either")
+			print(self.elevators.get(e_id).tasks.keys())
+
 		if flag == 1:
 			print("Added request task in middle")
 
 		if flag == 0:
-			if current_state[e_id] != floor_from:
+			if len(self.elevators.get(e_id).task_keys) > 0:
+				last_task_floor = self.elevators.get(e_id).task_keys[-1][1]
+				self.create_task(e_id, 'move', floor_from=last_task_floor, 
+					floor_to=floor_from, count=count)
+			else:
 				self.create_task(e_id, 'move', floor_from=current_state[e_id], 
-					floor_to=floor_from, count=1)
+					floor_to=floor_from, count=count)
 
-			self.create_task(e_id, 'doors', floor=floor_from)
+			self.create_task(e_id, 'open door', floor=floor_from, count=count)
 
-			self.create_task(e_id, 'hold', floor=floor_from, count=1)
+			self.create_task(e_id, 'hold', floor=floor_from, count=count)
 
-			self.create_task(e_id, 'move', floor_from=floor_from, floor_to=floor_to)
+			self.create_task(e_id, 'close door', floor=floor_from, count=count)
 
-			self.create_task(e_id, 'doors', floor=floor_to)
+			self.create_task(e_id, 'move', floor_from=floor_from, floor_to=floor_to, count=count)
 
-			self.create_task(e_id, 'hold', floor=floor_to, count=1)
+			self.create_task(e_id, 'open door', floor=floor_to, count=count)
 
-			# self.create_task(e_id, 'doors', floor=floor_to)
-		
+			self.create_task(e_id, 'hold', floor=floor_to, count=count)
+
+			self.create_task(e_id, 'close door', floor=floor_to, count=count)
+			print("Added request task at the end")
+		#print(self.elevators.get(e_id).tasks.keys())
 
 	def request_service(self, floor_at: int, floor_to: int, count: int):
 		""" Method is the primary process created by a request in
@@ -280,4 +371,5 @@ class ElevatorControl:
 
 		# If elevator was idle, call to start processing tasks
 		if self.elevators.get(selected_e_id).current_task_key is None:
-			self.env.process(self.elevators.get(selected_e_id).process_tasks())
+			#self.env.process(self.elevators.get(selected_e_id).process_tasks())
+			pass

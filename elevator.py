@@ -12,7 +12,8 @@ class Task:
     to request but their own tasks. ElevatorControl creates such tasks for elevators.
     """
 
-    def __init__(self, elevator_object, task_type: ['hold', 'move', 'doors'],
+    def __init__(self, elevator_object, 
+        task_type: ['hold', 'move', 'open door', 'close door'],
         floor=None, floor_from=None, floor_to=None, count=None):
 
         self.elevator = elevator_object
@@ -26,16 +27,22 @@ class Task:
                 self.floor_from = floor_from
                 self.floor_to = floor_to
 
-        if self.type in ['doors', 'hold']:
-            self.floor = floor
+        if self.type in ['open door', 'close door', 'hold']:
+            if floor in self.elevator.possible_states:
+                self.floor = floor
+            else:
+                raise ValueError('Task {}: Floor is outside possible states'.format(self.type))
 
-        if self.type == 'hold':
+        if self.type not in ['open door', 'close door']:
             if not isinstance(count, int):
                 raise ValueError('People count must be integer')
             if count < 0:
                 raise ValueError('People count cannot be negative number')
             self.count = count
 
+    def update_count(count_delta):
+        self.count = self.count + count_delta
+        
     def timeout(self, time):
         """
         Method seprates simpy timeout from processes that may require to be
@@ -79,7 +86,7 @@ class Task:
             #print(" "*25 + f'Holding elevator at floor {self.elevator.current_state} at time {round(self.elevator.env.now, 1)}')
             yield self.elevator.env.process(self.timeout(max(2, self.count)))
 
-        if self.type == 'doors':
+        if self.type in ['open door', 'close door']:
             yield self.elevator.env.process(self.timeout(0.5))
 
         if self.type == 'move':
@@ -91,9 +98,8 @@ class Elevator:
     """Class: Creates an elevator object with properties such as current
     state (floor which elevator is at), speed, possible states (floors).
     Also, handles and acts on various requests"""
-
     def __init__(self, sim_env, floors: tuple, floor_height: float,
-                 max_speed: float, max_accel: float):
+            max_speed: float, max_accel: float):
         self.env = sim_env
         self.elevator = simpy.Resource(self.env)
         if type(floors) == tuple:
@@ -118,7 +124,7 @@ class Elevator:
         self.tasks = {} # dictionary holding all tasks
         self.task_keys = []
         self.current_task_key = None
-        
+
 
     def get_travel_time(self, floor_from: int, floor_to: int):
         """
@@ -159,7 +165,7 @@ class Elevator:
             key_iterator = iter(self.current_task_key)
             current_task_type = next(key_iterator, None)
 
-            if current_task_type in ['hold', 'doors']:
+            if current_task_type in ['hold', 'open door', 'close door']:
                 index = 0
 
                 # look at subsequent tasks to find 'move' type task
@@ -181,7 +187,7 @@ class Elevator:
                 return 'up' if floor_to - floor_from > 0 \
                 else 'down'
         return None
-    
+
     def process_tasks(self):
         """
         Method executes all the pending tasks for the elevator
