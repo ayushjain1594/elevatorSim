@@ -40,7 +40,7 @@ class Task:
                 raise ValueError('People count cannot be negative number')
             self.count = count
 
-    def update_count(count_delta):
+    def update_count(self, count_delta):
         self.count = self.count + count_delta
         
     def timeout(self, time):
@@ -62,10 +62,11 @@ class Task:
         task_start_time = self.elevator.env.now
 
         try:
+            self.elevator.current_state = self.floor_to
             yield self.elevator.env.process(self.timeout(travel_time))
 
             # Once reached, update current state
-            self.elevator.current_state = self.floor_to
+            #self.elevator.current_state = self.floor_to
 
         except simpy.Interrupt as interrupt:
             # If interruted, get cause
