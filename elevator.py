@@ -5,6 +5,8 @@ import numpy as np
 from contextlib import suppress
 import math
 
+from printevent import print_event
+
 
 class Task:
     """
@@ -51,12 +53,11 @@ class Task:
         if time >= 0:
             yield self.elevator.env.timeout(time)
             
-    def go_to(self):
+    def go_to(self, travel_time):
         """Method executes a 'move' type task and allows for interruption
         by ElevatorControl"""
 
-        # get travel time
-        travel_time = self.elevator.get_travel_time(self.floor_from, self.floor_to)
+        
 
         # mark the start of execution
         task_start_time = self.elevator.env.now
@@ -76,7 +77,7 @@ class Task:
                     self.floor_to = int(cause[cause.index(':') + 1:])
 
                     # Initiate a new process
-                    yield self.elevator.env.process(self.go_to(new_floor_to))
+                    #yield self.elevator.env.process(self.go_to(new_floor_to))
 
                 except IndexError | ValueError:
                     pass
@@ -91,8 +92,16 @@ class Task:
             yield self.elevator.env.process(self.timeout(0.5))
 
         if self.type == 'move':
-            print(" "*25 + f'Moving elevator to {self.floor_to} at time {round(self.elevator.env.now, 1)}')
-            yield self.elevator.env.process(self.go_to())
+            # get travel time
+            travel_time = self.elevator.get_travel_time(
+                self.floor_from, self.floor_to)
+
+            print_event(
+                time=round(self.elevator.env.now,1),
+                event=f'Moving elevator to {self.floor_to}',
+                etc=round(self.elevator.env.now + travel_time,1)
+            )
+            yield self.elevator.env.process(self.go_to(travel_time))
 
 
 class Elevator:

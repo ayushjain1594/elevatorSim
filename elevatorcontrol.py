@@ -1,4 +1,5 @@
 from elevator import Elevator, Task
+from printevent import print_event
 
 class ElevatorControl:
 	"""Object of this class have one or more Elevator objects in 
@@ -190,7 +191,7 @@ class ElevatorControl:
 							#	|	|
 							#		|
 							if self.strictly_greater(task_from, floor_from, req_dir):
-								print("Identified Case 1")
+								print_event(message="Identified Case 1")
 								if current_index == start_index:
 									self.create_move_task(e_id, floor_from, 
 										task_from, current_index)
@@ -221,7 +222,7 @@ class ElevatorControl:
 							#	|	|
 							#	|	|
 							if task_from == floor_from:
-								print("Identified Case 2")
+								print_event(message="Identified Case 2")
 								if current_index+1 < \
 								len(self.elevators.get(e_id).task_keys):
 									subsequent_task_key = self.get_task_key(e_id, 
@@ -252,7 +253,7 @@ class ElevatorControl:
 							#	|
 							if self.strictly_less(task_from, floor_from, req_dir) and \
 							self.strictly_greater(task_to, floor_from, req_dir):
-								print("Identified Case 3")
+								print_event(message="Identified Case 3")
 								
 								self.delete_task(e_id, current_index)
 								self.create_move_task(e_id, task_from, 
@@ -273,7 +274,7 @@ class ElevatorControl:
 							#		|
 							if self.strictly_greater(task_from, floor_from, req_dir) and \
 							self.strictly_less(task_from, floor_to, req_dir):
-								print("Identified Case 4")
+								print_event(message="Identified Case 4")
 								if current_index == start_index:
 									self.create_move_task(e_id, floor_from, 
 										task_from, current_index)
@@ -299,7 +300,7 @@ class ElevatorControl:
 							#	|	|
 							#	|	|
 							if task_from == floor_from:
-								print("Identified Case 5")
+								print_event(message="Identified Case 5")
 								self.delete_task(e_id, current_index)
 								self.create_move_task(e_id, task_from, 
 									floor_to, current_index)
@@ -315,7 +316,7 @@ class ElevatorControl:
 							#	|	|
 							#	|
 							if self.strictly_less(task_from, floor_from, req_dir):
-								print("Identified Case 6")
+								print_event(message="Identified Case 6")
 								self.delete_task(e_id, current_index)
 								self.create_move_task(e_id, task_from,
 									floor_from, current_index)
@@ -336,7 +337,7 @@ class ElevatorControl:
 							# ***First move in this direction otherwise
 							# will fall under case 4***
 							if self.strictly_greater(task_from, floor_from, move_task_dir):
-								print("Identified Case 7")
+								print_event(message="Identified Case 7")
 								if current_index == start_index:
 									self.create_move_task(e_id, 
 										floor_from, task_from,
@@ -365,7 +366,7 @@ class ElevatorControl:
 							#	|	|
 							#	|	|
 							if task_from == floor_from:
-								print("Identified Case 8")
+								print_event(message="Identified Case 8")
 								flag = 1
 
 							# Case 9
@@ -376,7 +377,7 @@ class ElevatorControl:
 							#	|	|
 							#	|
 							if self.strictly_less(task_from, floor_from, move_task_dir):
-								print("Identified Case 9")
+								print_event(message="Identified Case 9")
 								self.delete_task(e_id, current_index)
 								self.create_move_task(e_id, task_from,
 									floor_from, current_index)
@@ -402,7 +403,7 @@ class ElevatorControl:
 			print(self.elevators.get(e_id).tasks.keys())
 
 		if flag == 1:
-			print("Added request task in middle")
+			print_event(message="Added request task in middle")
 
 		if flag == 0:
 			# Request could not accomodated with others
@@ -419,7 +420,7 @@ class ElevatorControl:
 
 			self.create_move_task(e_id, floor_from, floor_to)
 			
-			print("Added request task at the end")
+			print_event(message="Added request task at the end")
 		#print(self.elevators.get(e_id).task_keys)
 
 

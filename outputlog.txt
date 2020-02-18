@@ -1,0 +1,98 @@
+
+
+SIMULATION started logging at 02/17/2020 16:13
+TIME    SYSTEM  EVENT                              MESSAGE                            ETC            
+7.3     -       Request arrived: 2 to 1            -                                  -              
+-       -       -                                  Added request task at the end      -              
+7.3     -       Moving elevator to 2               -                                  18.3           
+17.9    -       Request arrived: 3 to 1            -                                  -              
+-       -       -                                  Identified Case 7                  -              
+-       -       -                                  Identified Case 8                  -              
+-       -       -                                  Added request task in middle       -              
+-       -       -                                  Added request task in middle       -              
+18.3    -       Moving elevator to 2               -                                  22.3           
+19.0    -       Request arrived: 2 to 1            -                                  -              
+-       -       -                                  Identified Case 8                  -              
+-       -       -                                  Added request task in middle       -              
+22.3    -       Moving elevator to 1               -                                  26.3           
+41.1    -       Request arrived: 4 to 9            -                                  -              
+-       -       -                                  Added request task at the end      -              
+41.1    -       Moving elevator to 4               -                                  48.0           
+48.0    -       Moving elevator to 9               -                                  57.0           
+48.6    -       Request arrived: 6 to 8            -                                  -              
+-       -       -                                  Added request task at the end      -              
+54.6    -       Request arrived: 3 to 1            -                                  -              
+-       -       -                                  Added request task at the end      -              
+57.0    -       Moving elevator to 6               -                                  63.9           
+60.5    -       Request arrived: 2 to 3            -                                  -              
+-       -       -                                  Added request task at the end      -              
+63.9    -       Moving elevator to 8               -                                  69.6           
+69.6    -       Moving elevator to 3               -                                  78.6           
+73.3    -       Request arrived: 9 to 3            -                                  -              
+-       -       -                                  Added request task at the end      -              
+76.9    -       Request arrived: 4 to 2            -                                  -              
+-       -       -                                  Identified Case 4                  -              
+-       -       -                                  Identified Case 5                  -              
+-       -       -                                  Added request task in middle       -              
+-       -       -                                  Added request task in middle       -              
+77.1    -       Request arrived: 3 to 6            -                                  -              
+-       -       -                                  Identified Case 5                  -              
+-       -       -                                  Added request task in middle       -              
+78.6    -       Moving elevator to 3               -                                  82.6           
+80.6    -       Request arrived: 2 to 3            -                                  -              
+-       -       -                                  Identified Case 8                  -              
+-       -       -                                  Added request task in middle       -              
+82.6    -       Moving elevator to 2               -                                  86.6           
+86.6    -       Moving elevator to 1               -                                  90.6           
+90.6    -       Moving elevator to 2               -                                  94.6           
+93.0    -       Request arrived: 8 to 4            -                                  -              
+-       -       -                                  Identified Case 6                  -              
+-       -       -                                  Added request task in middle       -              
+94.6    -       Moving elevator to 3               -                                  98.6           
+98.6    -       Moving elevator to 6               -                                  105.5          
+
+
+SIMULATION started logging at 02/17/2020 16:16
+TIME    SYSTEM  EVENT                              MESSAGE                            ETC            
+2.8     -       Request arrived: 2 to 3            -                                  -              
+-       -       -                                  Added request task at the end      -              
+2.8     -       Moving elevator to 2               -                                  13.8           
+8.3     -       Request arrived: 3 to 4            -                                  -              
+-       -       -                                  Added request task at the end      -              
+11.7    -       Request arrived: 9 to 5            -                                  -              
+-       -       -                                  Added request task at the end      -              
+13.8    -       Moving elevator to 3               -                                  17.8           
+17.8    -       Moving elevator to 4               -                                  21.8           
+21.8    -       Moving elevator to 9               -                                  30.8           
+30.8    -       Moving elevator to 5               -                                  38.8           
+36.6    -       Request arrived: 1 to 5            -                                  -              
+-       -       -                                  Added request task at the end      -              
+38.8    -       Moving elevator to 1               -                                  46.8           
+43.3    -       Request arrived: 9 to 4            -                                  -              
+-       -       -                                  Added request task at the end      -              
+46.8    -       Moving elevator to 5               -                                  54.8           
+54.8    -       Moving elevator to 9               -                                  62.8           
+57.3    -       Request arrived: 7 to 1            -                                  -              
+-       -       -                                  Identified Case 3                  -              
+-       -       -                                  Added request task at the end      -              
+-       -       -                                  Added request task in middle       -              
+62.8    -       Moving elevator to 7               -                                  68.5           
+68.5    -       Moving elevator to 4               -                                  75.4           
+69.0    -       Request arrived: 6 to 2            -                                  -              
+-       -       -                                  Identified Case 4                  -              
+-       -       -                                  Identified Case 5                  -              
+-       -       -                                  Added request task in middle       -              
+-       -       -                                  Added request task in middle       -              
+75.4    -       Moving elevator to 4               -                                  81.1           
+81.1    -       Moving elevator to 2               -                                  86.8           
+86.4    -       Request arrived: 9 to 5            -                                  -              
+-       -       -                                  Added request task at the end      -              
+86.8    -       Moving elevator to 1               -                                  90.8           
+89.5    -       Request arrived: 3 to 1            -                                  -              
+-       -       -                                  Added request task at the end      -              
+90.8    -       Moving elevator to 9               -                                  102.8          
+96.4    -       Request arrived: 4 to 2            -                                  -              
+-       -       -                                  Identified Case 3                  -              
+-       -       -                                  Identified Case 5                  -              
+-       -       -                                  Added request task in middle       -              
+-       -       -                                  Added request task in middle       -              
